@@ -36,7 +36,9 @@ export default function Login() {
     >
       {/* 3D Highway Background */}
       <Suspense fallback={null}>
-        <Hyperspeed />
+        <div className="fixed inset-0 z-0" style={{ background: '#070510' }}>
+          <Hyperspeed effectOptions={hyperspeedPresets.one} />
+        </div>
       </Suspense>
 
       {/* Content */}
