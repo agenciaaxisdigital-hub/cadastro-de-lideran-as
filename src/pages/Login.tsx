@@ -1,8 +1,9 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, lazy, Suspense, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { User, Lock, Loader2, LogIn, Eye, EyeOff } from 'lucide-react';
 import fernandaImg from '@/assets/fernanda-sarelli.jpg';
+import { hyperspeedPresets } from '@/components/HyperspeedPresets';
 
 const Hyperspeed = lazy(() => import('@/components/Hyperspeed'));
 
@@ -35,7 +36,9 @@ export default function Login() {
     >
       {/* 3D Highway Background */}
       <Suspense fallback={null}>
-        <Hyperspeed />
+        <div className="fixed inset-0 z-0" style={{ background: '#070510' }}>
+          <Hyperspeed effectOptions={hyperspeedPresets.one} />
+        </div>
       </Suspense>
 
       {/* Content */}
