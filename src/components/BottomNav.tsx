@@ -1,36 +1,39 @@
-import { Home, Search, BarChart3, UserCircle } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { PlusCircle, List, UserCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
-const navItems = [
-  { path: '/', icon: Home, label: 'Lideranças' },
-  { path: '/buscar', icon: Search, label: 'Buscar' },
-  { path: '/ranking', icon: BarChart3, label: 'Resumo', adminOnly: true },
-  { path: '/perfil', icon: UserCircle, label: 'Perfil' },
-];
+export type TabId = 'cadastrar' | 'liderancas' | 'perfil';
 
-export default function BottomNav() {
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
+interface Props {
+  active: TabId;
+  onChange: (tab: TabId) => void;
+}
+
+export default function BottomNav({ active, onChange }: Props) {
   const { isAdmin } = useAuth();
 
-  const items = navItems.filter(item => !item.adminOnly || isAdmin);
+  const tabs: { id: TabId; icon: typeof PlusCircle; label: string }[] = [
+    { id: 'cadastrar', icon: PlusCircle, label: 'Cadastrar' },
+    { id: 'liderancas', icon: List, label: isAdmin ? 'Todas' : 'Minhas' },
+    { id: 'perfil', icon: UserCircle, label: 'Perfil' },
+  ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border safe-bottom">
-      <div className="max-w-[672px] mx-auto flex justify-around items-center h-14">
-        {items.map(({ path, icon: Icon, label }) => {
-          const active = pathname === path;
+      <div className="max-w-[672px] mx-auto flex justify-around items-center h-16">
+        {tabs.map(({ id, icon: Icon, label }) => {
+          const isActive = active === id;
           return (
             <button
-              key={path}
-              onClick={() => navigate(path)}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-colors ${
-                active ? 'text-primary font-semibold' : 'text-muted-foreground'
+              key={id}
+              onClick={() => onChange(id)}
+              className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all active:scale-90 ${
+                isActive
+                  ? 'text-primary'
+                  : 'text-muted-foreground'
               }`}
             >
-              <Icon size={22} strokeWidth={active ? 2.5 : 1.5} />
-              <span className="text-[10px]">{label}</span>
+              <Icon size={24} strokeWidth={isActive ? 2.5 : 1.5} />
+              <span className={`text-[11px] ${isActive ? 'font-bold' : 'font-medium'}`}>{label}</span>
             </button>
           );
         })}
