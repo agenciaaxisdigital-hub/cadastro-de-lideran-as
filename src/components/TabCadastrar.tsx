@@ -32,9 +32,10 @@ interface Props {
 export default function TabCadastrar({ onSaved }: Props) {
   const { usuario } = useAuth();
   const [saving, setSaving] = useState(false);
-  const [buscandoCPF, setBuscandoCPF] = useState(false);
+  const [validandoCPF, setValidandoCPF] = useState(false);
+  const [cpfStatus, setCpfStatus] = useState<'idle' | 'validando' | 'confirmado' | 'divergente' | 'nao_encontrado'>('idle');
+  const [cpfNomeAPI, setCpfNomeAPI] = useState('');
   const [pessoaExistenteId, setPessoaExistenteId] = useState<string | null>(null);
-  const [cpfEncontrado, setCpfEncontrado] = useState(false);
   const [liderancasExistentes, setLiderancasExistentes] = useState<{ id: string; nome: string }[]>([]);
   const [form, setForm] = useState({ ...emptyForm });
 
