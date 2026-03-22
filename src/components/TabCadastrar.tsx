@@ -6,7 +6,6 @@ import { formatCPF, cleanCPF, validateCPF } from '@/lib/cpf';
 import { toast } from '@/hooks/use-toast';
 
 const statusOptions = ['Ativa', 'Potencial', 'Em negociação', 'Fraca', 'Descartada'];
-const statusOptions = ['Ativa', 'Potencial', 'Em negociação', 'Fraca', 'Descartada'];
 const comprometimentos = ['Alto', 'Médio', 'Baixo'];
 const situacoesTitulo = ['Regular', 'Cancelado', 'Suspenso', 'Não informado'];
 
