@@ -1,8 +1,9 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, lazy, Suspense, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { User, Lock, Loader2, LogIn, Eye, EyeOff } from 'lucide-react';
 import fernandaImg from '@/assets/fernanda-sarelli.jpg';
+import { hyperspeedPresets } from '@/components/HyperspeedPresets';
 
 const Hyperspeed = lazy(() => import('@/components/Hyperspeed'));
 
