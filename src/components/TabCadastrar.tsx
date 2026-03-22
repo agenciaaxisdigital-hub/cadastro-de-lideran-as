@@ -46,6 +46,7 @@ export default function TabCadastrar({ onSaved }: Props) {
       });
   }, []);
 
+  const update = useCallback((field: string, value: string) => setForm(f => ({ ...f, [field]: value })), []);
   const cpfTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Quando CPF completo, busca local + valida na API
