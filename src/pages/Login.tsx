@@ -55,7 +55,7 @@ export default function Login() {
         {/* Title */}
         <div className="text-center space-y-1">
           <h1 className="text-2xl font-bold text-white tracking-tight">Dra. Fernanda Sarelli</h1>
-          <p className="text-sm font-semibold text-pink-400 uppercase tracking-wider">Painel de Suplentes</p>
+          <p className="text-sm font-semibold text-pink-400 uppercase tracking-wider">Cadastro de Lideranças</p>
           <p className="text-xs text-white/40">Acesso exclusivo da equipe</p>
         </div>
 
