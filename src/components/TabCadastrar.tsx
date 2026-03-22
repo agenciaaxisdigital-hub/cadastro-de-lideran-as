@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Loader2, CheckCircle2 } from 'lucide-react';
+import { Loader2, CheckCircle2, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCPF, cleanCPF, validateCPF } from '@/lib/cpf';
@@ -217,6 +217,15 @@ export default function TabCadastrar({ onSaved }: Props) {
       {/* Dados Eleitorais */}
       <div className="section-card">
         <h2 className="section-title">🗳️ Dados Eleitorais</h2>
+        <button
+          type="button"
+          onClick={() => window.open('https://www.tse.jus.br/servicos-eleitorais/autoatendimento-eleitoral#/atendimento-eleitor', '_blank')}
+          className="w-full flex items-center justify-center gap-2 h-10 px-4 border border-border rounded-xl text-sm font-medium text-primary bg-primary/5 hover:bg-primary/10 active:scale-[0.97] transition-all"
+        >
+          <ExternalLink size={16} />
+          Consultar dados no TSE
+        </button>
+        <p className="text-[11px] text-muted-foreground -mt-2">Abra o site do TSE, consulte os dados eleitorais e preencha abaixo.</p>
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">Título de eleitor</label>
           <input type="text" value={form.titulo_eleitor} onChange={e => update('titulo_eleitor', e.target.value)} placeholder="Número do título" className={inputCls} />
