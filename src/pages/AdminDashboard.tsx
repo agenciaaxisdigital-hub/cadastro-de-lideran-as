@@ -417,7 +417,8 @@ export default function AdminDashboard() {
           <h2 className="section-title">👥 Detalhes por Agente</h2>
           <div className="space-y-2">
             {rankingData.map((ranking, idx) => {
-              const agente = agentes.find(a => a.id === ranking.id)!;
+              const agente = agentes.find(a => a.id === ranking.id);
+              if (!agente) return null;
               const items = liderancasPorAgente[agente.id] || [];
               const isOpen = expandedAgente === agente.id;
               const ativasAgente = items.filter(i => i.status === 'Ativa').length;
