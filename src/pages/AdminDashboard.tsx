@@ -85,13 +85,31 @@ export default function AdminDashboard() {
   }, [isAdmin]);
 
   const fetchData = async () => {
-    const [lRes, aRes] = await Promise.all([
+    const [lRes, uRes] = await Promise.all([
       supabase.from('liderancas').select('*, pessoas(nome, telefone, whatsapp, email, cpf, instagram, zona_eleitoral, secao_eleitoral, municipio_eleitoral, colegio_eleitoral, situacao_titulo)'),
-      supabase.from('usuarios').select('id, nome, criado_em'),
+      supabase.from('usuarios').select('id, nome, tipo, criado_em'),
     ]);
     if (lRes.data) setLiderancas(lRes.data as unknown as Lideranca[]);
-    if (aRes.data) setAgentes(aRes.data);
+    if (uRes.data) setUsuarios(uRes.data);
     setLoading(false);
+  };
+
+  const agentes = usuarios.filter(u => u.tipo === 'agente');
+
+  const handleCriarUsuario = async () => {
+    if (!novoNome.trim() || !novoSenha.trim()) return;
+    setCriandoUsuario(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('criar-usuario', {
+        body: { nome: novoNome.trim(), senha: novoSenha, tipo: novoTipo },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setNovoNome(''); setNovoSenha(''); setNovoTipo('agente'); setShowCriarUsuario(false);
+      fetchData();
+    } catch (err: any) {
+      alert('Erro: ' + (err.message || 'Falha ao criar usuário'));
+    } finally { setCriandoUsuario(false); }
   };
 
   // ── Métricas gerais ──
