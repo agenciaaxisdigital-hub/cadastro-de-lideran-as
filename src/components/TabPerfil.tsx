@@ -20,7 +20,9 @@ export default function TabPerfil() {
     setLoaded(true);
   };
 
-  if (isAdmin && !loaded) fetchUsuarios();
+  useEffect(() => {
+    if (isAdmin && !loaded) fetchUsuarios();
+  }, [isAdmin]);
 
   const handleCriar = async () => {
     if (!novoNome.trim() || !novoSenha.trim()) return;
