@@ -152,7 +152,7 @@ export default function TabCadastrar({ onSaved }: Props) {
       setForm({ ...emptyForm });
       setPessoaExistenteId(null);
       setCpfStatus('idle');
-      setCpfNomeAPI('');
+      setCpfNomePessoa('');
       onSaved();
     } catch (err: any) {
       toast({ title: 'Erro ao salvar', description: err.message, variant: 'destructive' });
