@@ -100,7 +100,6 @@ export default function TabCadastrar({ onSaved }: Props) {
   const handleSave = async () => {
     if (!form.nome.trim()) { toast({ title: 'Preencha o nome', variant: 'destructive' }); return; }
     if (!form.telefone.trim() && !form.whatsapp.trim()) { toast({ title: 'Informe telefone ou WhatsApp', variant: 'destructive' }); return; }
-    if (!form.tipo_lideranca) { toast({ title: 'Selecione o tipo de liderança', variant: 'destructive' }); return; }
     if (form.cpf && form.cpf.length === 11 && !validateCPF(form.cpf)) { toast({ title: 'CPF inválido', variant: 'destructive' }); return; }
 
     setSaving(true);
