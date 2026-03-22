@@ -255,10 +255,6 @@ export default function TabCadastrar({ onSaved }: Props) {
           <input type="text" value={form.colegio_eleitoral} onChange={e => update('colegio_eleitoral', e.target.value)} placeholder="Nome da escola / local" className={inputCls} />
         </div>
         <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">Endereço colégio</label>
-          <textarea value={form.endereco_colegio} onChange={e => update('endereco_colegio', e.target.value)} rows={2} placeholder="Rua, número, bairro..." className={textareaCls} />
-        </div>
-        <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">Situação do título</label>
           <select value={form.situacao_titulo} onChange={e => update('situacao_titulo', e.target.value)} className={selectCls}>
             <option value="">Selecione...</option>
