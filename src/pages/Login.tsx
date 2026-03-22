@@ -5,21 +5,21 @@ import fernandaImg from '@/assets/fernanda-sarelli.jpg';
 
 export default function Login() {
   const { signIn } = useAuth();
-  const [email, setEmail] = useState('');
+  const [nome, setNome] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      toast({ title: 'Preencha e-mail e senha', variant: 'destructive' });
+    if (!nome || !password) {
+      toast({ title: 'Preencha nome e senha', variant: 'destructive' });
       return;
     }
     setLoading(true);
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(nome, password);
     setLoading(false);
     if (error) {
-      toast({ title: 'Erro ao entrar', description: error, variant: 'destructive' });
+      toast({ title: 'Erro ao entrar', description: 'Nome ou senha incorretos', variant: 'destructive' });
     }
   };
 
@@ -47,12 +47,14 @@ export default function Login() {
         <form onSubmit={handleSubmit}
           className="w-full bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 space-y-4">
           <div className="space-y-1.5">
-            <label className="label-micro text-white/40">E-mail</label>
+            <label className="label-micro text-white/40">Nome de usuário</label>
             <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="seu@email.com"
+              type="text"
+              value={nome}
+              onChange={e => setNome(e.target.value)}
+              placeholder="Seu nome de acesso"
+              autoCapitalize="none"
+              autoCorrect="off"
               className="w-full h-12 px-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/25 outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>

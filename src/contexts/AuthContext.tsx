@@ -14,11 +14,17 @@ interface AuthContextType {
   usuario: Usuario | null;
   loading: boolean;
   isAdmin: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (nome: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Convert username to a fake email for Supabase Auth
+function nomeToEmail(nome: string): string {
+  const slug = nome.toLowerCase().trim().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
+  return `${slug}@liderancas.app`;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -40,7 +46,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        // Use setTimeout to avoid deadlock with Supabase auth
         setTimeout(() => fetchUsuario(session.user.id), 0);
       } else {
         setUsuario(null);
@@ -59,7 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (nome: string, password: string) => {
+    const email = nomeToEmail(nome);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: error?.message ?? null };
   };
