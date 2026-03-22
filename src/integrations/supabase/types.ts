@@ -369,6 +369,91 @@ export type Database = {
           },
         ]
       }
+      liderancas: {
+        Row: {
+          apoiadores_estimados: number | null
+          atualizado_em: string
+          bairros_influencia: string | null
+          cadastrado_por: string | null
+          comunidades_influencia: string | null
+          criado_em: string
+          id: string
+          lider_principal_id: string | null
+          meta_votos: number | null
+          nivel: string | null
+          nivel_comprometimento: string | null
+          observacoes: string | null
+          origem_captacao: string | null
+          pessoa_id: string
+          regiao_atuacao: string | null
+          status: string
+          tipo_lideranca: string | null
+          zona_atuacao: string | null
+        }
+        Insert: {
+          apoiadores_estimados?: number | null
+          atualizado_em?: string
+          bairros_influencia?: string | null
+          cadastrado_por?: string | null
+          comunidades_influencia?: string | null
+          criado_em?: string
+          id?: string
+          lider_principal_id?: string | null
+          meta_votos?: number | null
+          nivel?: string | null
+          nivel_comprometimento?: string | null
+          observacoes?: string | null
+          origem_captacao?: string | null
+          pessoa_id: string
+          regiao_atuacao?: string | null
+          status?: string
+          tipo_lideranca?: string | null
+          zona_atuacao?: string | null
+        }
+        Update: {
+          apoiadores_estimados?: number | null
+          atualizado_em?: string
+          bairros_influencia?: string | null
+          cadastrado_por?: string | null
+          comunidades_influencia?: string | null
+          criado_em?: string
+          id?: string
+          lider_principal_id?: string | null
+          meta_votos?: number | null
+          nivel?: string | null
+          nivel_comprometimento?: string | null
+          observacoes?: string | null
+          origem_captacao?: string | null
+          pessoa_id?: string
+          regiao_atuacao?: string | null
+          status?: string
+          tipo_lideranca?: string | null
+          zona_atuacao?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "liderancas_cadastrado_por_fkey"
+            columns: ["cadastrado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "liderancas_lider_principal_id_fkey"
+            columns: ["lider_principal_id"]
+            isOneToOne: false
+            referencedRelation: "liderancas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "liderancas_pessoa_id_fkey"
+            columns: ["pessoa_id"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mensagens_contato: {
         Row: {
           bairro: string | null
@@ -444,6 +529,69 @@ export type Database = {
         }
         Relationships: []
       }
+      pessoas: {
+        Row: {
+          atualizado_em: string
+          colegio_eleitoral: string | null
+          cpf: string | null
+          criado_em: string
+          email: string | null
+          endereco_colegio: string | null
+          facebook: string | null
+          id: string
+          instagram: string | null
+          municipio_eleitoral: string | null
+          nome: string
+          secao_eleitoral: string | null
+          situacao_titulo: string | null
+          telefone: string | null
+          titulo_eleitor: string | null
+          uf_eleitoral: string | null
+          whatsapp: string | null
+          zona_eleitoral: string | null
+        }
+        Insert: {
+          atualizado_em?: string
+          colegio_eleitoral?: string | null
+          cpf?: string | null
+          criado_em?: string
+          email?: string | null
+          endereco_colegio?: string | null
+          facebook?: string | null
+          id?: string
+          instagram?: string | null
+          municipio_eleitoral?: string | null
+          nome: string
+          secao_eleitoral?: string | null
+          situacao_titulo?: string | null
+          telefone?: string | null
+          titulo_eleitor?: string | null
+          uf_eleitoral?: string | null
+          whatsapp?: string | null
+          zona_eleitoral?: string | null
+        }
+        Update: {
+          atualizado_em?: string
+          colegio_eleitoral?: string | null
+          cpf?: string | null
+          criado_em?: string
+          email?: string | null
+          endereco_colegio?: string | null
+          facebook?: string | null
+          id?: string
+          instagram?: string | null
+          municipio_eleitoral?: string | null
+          nome?: string
+          secao_eleitoral?: string | null
+          situacao_titulo?: string | null
+          telefone?: string | null
+          titulo_eleitor?: string | null
+          uf_eleitoral?: string | null
+          whatsapp?: string | null
+          zona_eleitoral?: string | null
+        }
+        Relationships: []
+      }
       roles_painel: {
         Row: {
           cargo: Database["public"]["Enums"]["cargo_admin"]
@@ -486,6 +634,30 @@ export type Database = {
         }
         Relationships: []
       }
+      usuarios: {
+        Row: {
+          auth_user_id: string
+          criado_em: string
+          id: string
+          nome: string
+          tipo: string
+        }
+        Insert: {
+          auth_user_id: string
+          criado_em?: string
+          id?: string
+          nome: string
+          tipo?: string
+        }
+        Update: {
+          auth_user_id?: string
+          criado_em?: string
+          id?: string
+          nome?: string
+          tipo?: string
+        }
+        Relationships: []
+      }
       usuarios_painel: {
         Row: {
           cargo: string
@@ -518,6 +690,8 @@ export type Database = {
       criar_primeiro_admin: { Args: { _email: string }; Returns: undefined }
       eh_admin: { Args: { _user_id: string }; Returns: boolean }
       eh_admin_painel: { Args: { _user_id: string }; Returns: boolean }
+      get_usuario_id: { Args: never; Returns: string }
+      is_app_admin: { Args: never; Returns: boolean }
       tem_cargo: {
         Args: {
           _cargo: Database["public"]["Enums"]["cargo_admin"]
