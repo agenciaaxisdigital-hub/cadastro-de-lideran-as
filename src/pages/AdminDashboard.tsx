@@ -39,9 +39,10 @@ interface Lideranca {
   } | null;
 }
 
-interface Agente {
+interface Usuario {
   id: string;
   nome: string;
+  tipo: string;
   criado_em: string;
 }
 
