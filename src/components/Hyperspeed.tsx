@@ -22,30 +22,25 @@ function Particles() {
     }));
   }, []);
 
-  const colors = useMemo(() => {
-    const arr = new Float32Array(PARTICLE_COUNT * 3);
+  // Set random pink-spectrum colors per instance
+  useMemo(() => {
+    if (!meshRef.current) return;
+    const color = new THREE.Color();
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       const t = Math.random();
-      // Pink spectrum: from deep rose to bright pink to soft white-pink
       if (t < 0.4) {
-        // Deep rose/magenta
-        arr[i * 3] = 0.85 + Math.random() * 0.15;
-        arr[i * 3 + 1] = 0.1 + Math.random() * 0.2;
-        arr[i * 3 + 2] = 0.3 + Math.random() * 0.3;
+        color.setRGB(0.85 + Math.random() * 0.15, 0.1 + Math.random() * 0.2, 0.3 + Math.random() * 0.3);
       } else if (t < 0.75) {
-        // Bright pink
-        arr[i * 3] = 0.95 + Math.random() * 0.05;
-        arr[i * 3 + 1] = 0.25 + Math.random() * 0.25;
-        arr[i * 3 + 2] = 0.45 + Math.random() * 0.25;
+        color.setRGB(0.95 + Math.random() * 0.05, 0.25 + Math.random() * 0.25, 0.45 + Math.random() * 0.25);
       } else {
-        // Soft white-pink (headlight feel)
-        arr[i * 3] = 0.9 + Math.random() * 0.1;
-        arr[i * 3 + 1] = 0.7 + Math.random() * 0.3;
-        arr[i * 3 + 2] = 0.8 + Math.random() * 0.2;
+        color.setRGB(0.9 + Math.random() * 0.1, 0.7 + Math.random() * 0.3, 0.8 + Math.random() * 0.2);
       }
+      meshRef.current.setColorAt(i, color);
     }
-    return arr;
-  }, []);
+    if (meshRef.current.instanceColor) {
+      meshRef.current.instanceColor.needsUpdate = true;
+    }
+  }, [meshRef.current]);
 
   useFrame((_, delta) => {
     if (!meshRef.current) return;
@@ -62,7 +57,6 @@ function Particles() {
       }
 
       dummy.position.set(p.x, p.y, p.z);
-      // Stretch along z-axis for light trail effect
       dummy.scale.set(p.scale, p.scale, p.scale * p.lengthScale);
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(i, dummy.matrix);
@@ -73,12 +67,7 @@ function Particles() {
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, PARTICLE_COUNT]}>
       <boxGeometry args={[1, 1, 1]} />
-      <meshBasicMaterial toneMapped={false} transparent opacity={0.85}>
-        <instancedBufferAttribute
-          attach="geometry-attributes-color"
-          args={[colors, 3]}
-        />
-      </meshBasicMaterial>
+      <meshBasicMaterial toneMapped={false} transparent opacity={0.85} />
     </instancedMesh>
   );
 }
@@ -89,16 +78,6 @@ function Scene() {
       <color attach="background" args={['#070510']} />
       <fog attach="fog" args={['#070510', 15, 55]} />
       <Particles />
-      {/* Central pink glow */}
-      <mesh position={[0, 0, -40]}>
-        <planeGeometry args={[60, 60]} />
-        <meshBasicMaterial
-          color="#ec4899"
-          transparent
-          opacity={0.03}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
     </>
   );
 }
@@ -114,7 +93,6 @@ export default function Hyperspeed() {
       >
         <Scene />
       </Canvas>
-      {/* Vignette overlay */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
