@@ -1,24 +1,55 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import Login from "./pages/Login";
+import Liderancas from "./pages/Liderancas";
+import NovaLideranca from "./pages/NovaLideranca";
+import DetalheLideranca from "./pages/DetalheLideranca";
+import Busca from "./pages/Busca";
+import Ranking from "./pages/Ranking";
+import Perfil from "./pages/Perfil";
 
 const queryClient = new QueryClient();
+
+function PrivateRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
+  if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading, usuario } = useAuth();
+  if (loading) return null;
+  if (user && usuario) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+      <Route path="/" element={<PrivateRoute><Liderancas /></PrivateRoute>} />
+      <Route path="/nova-lideranca" element={<PrivateRoute><NovaLideranca /></PrivateRoute>} />
+      <Route path="/lideranca/:id" element={<PrivateRoute><DetalheLideranca /></PrivateRoute>} />
+      <Route path="/buscar" element={<PrivateRoute><Busca /></PrivateRoute>} />
+      <Route path="/ranking" element={<PrivateRoute><Ranking /></PrivateRoute>} />
+      <Route path="/perfil" element={<PrivateRoute><Perfil /></PrivateRoute>} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
-      <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
