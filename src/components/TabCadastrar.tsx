@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Search, Loader2, CheckCircle2 } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCPF, cleanCPF, validateCPF } from '@/lib/cpf';
@@ -32,9 +32,10 @@ interface Props {
 export default function TabCadastrar({ onSaved }: Props) {
   const { usuario } = useAuth();
   const [saving, setSaving] = useState(false);
-  const [buscandoCPF, setBuscandoCPF] = useState(false);
+  const [validandoCPF, setValidandoCPF] = useState(false);
+  const [cpfStatus, setCpfStatus] = useState<'idle' | 'validando' | 'confirmado' | 'divergente' | 'nao_encontrado'>('idle');
+  const [cpfNomeAPI, setCpfNomeAPI] = useState('');
   const [pessoaExistenteId, setPessoaExistenteId] = useState<string | null>(null);
-  const [cpfEncontrado, setCpfEncontrado] = useState(false);
   const [liderancasExistentes, setLiderancasExistentes] = useState<{ id: string; nome: string }[]>([]);
   const [form, setForm] = useState({ ...emptyForm });
 
@@ -46,24 +47,25 @@ export default function TabCadastrar({ onSaved }: Props) {
   }, []);
 
   const update = useCallback((field: string, value: string) => setForm(f => ({ ...f, [field]: value })), []);
+  const cpfTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const buscarPorCPF = useCallback(async (cpfRaw: string) => {
-    const cleaned = cleanCPF(cpfRaw);
-    if (cleaned.length !== 11) return;
-    if (!validateCPF(cleaned)) {
-      toast({ title: 'CPF inválido', description: 'Verifique os números digitados', variant: 'destructive' });
+  // Quando CPF completo, busca local + valida na API
+  const validarCPF = useCallback(async (cpfClean: string) => {
+    if (cpfClean.length !== 11 || !validateCPF(cpfClean)) {
+      if (cpfClean.length === 11) toast({ title: 'CPF inválido', variant: 'destructive' });
       return;
     }
-    if (buscandoCPF) return;
-    setBuscandoCPF(true);
-    setCpfEncontrado(false);
+    if (validandoCPF) return;
+    setValidandoCPF(true);
+    setCpfStatus('validando');
+    setCpfNomeAPI('');
     setPessoaExistenteId(null);
     try {
-      // 1) Busca local
-      const { data: pessoa } = await supabase.from('pessoas').select('*').eq('cpf', cleaned).maybeSingle();
+      // 1) Busca local — preenche tudo se já cadastrado
+      const { data: pessoa } = await supabase.from('pessoas').select('*').eq('cpf', cpfClean).maybeSingle();
       if (pessoa) {
         setForm(f => ({
-          ...f, cpf: pessoa.cpf || cleaned,
+          ...f, cpf: pessoa.cpf || cpfClean,
           nome: pessoa.nome || f.nome, telefone: pessoa.telefone || f.telefone,
           whatsapp: pessoa.whatsapp || f.whatsapp, email: pessoa.email || f.email,
           instagram: pessoa.instagram || f.instagram, facebook: pessoa.facebook || f.facebook,
@@ -77,47 +79,61 @@ export default function TabCadastrar({ onSaved }: Props) {
           situacao_titulo: pessoa.situacao_titulo || f.situacao_titulo,
         }));
         setPessoaExistenteId(pessoa.id);
-        setCpfEncontrado(true);
-        toast({ title: '✅ Pessoa encontrada na base!', description: `Dados de ${pessoa.nome} preenchidos` });
+        setCpfStatus('confirmado');
+        setCpfNomeAPI(pessoa.nome);
+        toast({ title: '✅ Pessoa já cadastrada!', description: `Dados de ${pessoa.nome} preenchidos` });
         return;
       }
 
-      // 2) Busca na API externa (cpf-brasil.org)
+      // 2) Valida na API externa — apenas confirma nome
       try {
         const { data: apiData, error: fnError } = await supabase.functions.invoke('consultar-cpf', {
-          body: { cpf: cleaned },
+          body: { cpf: cpfClean },
         });
         if (!fnError && apiData?.found && apiData.nome) {
-          setForm(f => ({
-            ...f,
-            cpf: cleaned,
-            nome: apiData.nome || f.nome,
-          }));
-          setCpfEncontrado(true);
-          toast({ title: '✅ CPF encontrado!', description: `Nome: ${apiData.nome} (dados da Receita Federal)` });
+          setCpfNomeAPI(apiData.nome);
+          // Compara nome digitado com nome da API
+          const nomeForm = form.nome.trim().toLowerCase();
+          const nomeApi = apiData.nome.trim().toLowerCase();
+          if (!nomeForm || nomeApi.includes(nomeForm) || nomeForm.includes(nomeApi)) {
+            setCpfStatus('confirmado');
+          } else {
+            setCpfStatus('divergente');
+          }
           return;
         }
       } catch (apiErr) {
         console.warn('API externa indisponível:', apiErr);
       }
 
-      // 3) Nenhum resultado
-      setForm(f => ({ ...f, cpf: cleaned }));
-      toast({ title: 'CPF não encontrado', description: 'Preencha os dados manualmente' });
+      setCpfStatus('nao_encontrado');
     } catch (err) { console.error(err); }
-    finally { setBuscandoCPF(false); }
-  }, [buscandoCPF]);
-
-  const cpfTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    finally { setValidandoCPF(false); }
+  }, [validandoCPF, form.nome]);
 
   const handleCPFChange = (value: string) => {
     const cleaned = cleanCPF(value);
     update('cpf', cleaned);
-    setCpfEncontrado(false);
+    setCpfStatus('idle');
+    setCpfNomeAPI('');
     setPessoaExistenteId(null);
     if (cpfTimeoutRef.current) clearTimeout(cpfTimeoutRef.current);
     if (cleaned.length === 11) {
-      cpfTimeoutRef.current = setTimeout(() => buscarPorCPF(cleaned), 400);
+      cpfTimeoutRef.current = setTimeout(() => validarCPF(cleaned), 500);
+    }
+  };
+
+  // Re-validar quando nome muda e CPF já está completo
+  const handleNomeChange = (value: string) => {
+    update('nome', value);
+    if (cpfNomeAPI && form.cpf.length === 11) {
+      const nomeApi = cpfNomeAPI.trim().toLowerCase();
+      const nomeDigitado = value.trim().toLowerCase();
+      if (!nomeDigitado || nomeApi.includes(nomeDigitado) || nomeDigitado.includes(nomeApi)) {
+        setCpfStatus('confirmado');
+      } else {
+        setCpfStatus('divergente');
+      }
     }
   };
 
@@ -172,7 +188,8 @@ export default function TabCadastrar({ onSaved }: Props) {
       toast({ title: '✅ Liderança cadastrada com sucesso!' });
       setForm({ ...emptyForm });
       setPessoaExistenteId(null);
-      setCpfEncontrado(false);
+      setCpfStatus('idle');
+      setCpfNomeAPI('');
       onSaved();
     } catch (err: any) {
       toast({ title: 'Erro ao salvar', description: err.message, variant: 'destructive' });
@@ -183,34 +200,39 @@ export default function TabCadastrar({ onSaved }: Props) {
   const selectCls = inputCls;
   const textareaCls = "w-full px-3 py-2 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 resize-none";
 
+  const cpfBorderCls = cpfStatus === 'confirmado' ? 'border-emerald-500 ring-1 ring-emerald-500/30'
+    : cpfStatus === 'divergente' ? 'border-amber-500 ring-1 ring-amber-500/30'
+    : '';
+
   return (
     <div className="space-y-4 pb-24">
-      {/* CPF Search */}
-      <div className="section-card !space-y-2">
-        <div className="flex items-center gap-2">
-          <h2 className="section-title">🔍 CPF</h2>
-          {cpfEncontrado && <CheckCircle2 size={14} className="text-emerald-500" />}
-        </div>
-        <div className="flex gap-2">
-          <input type="text" inputMode="numeric" value={formatCPF(form.cpf)}
-            onChange={e => handleCPFChange(e.target.value)} placeholder="000.000.000-00"
-            className="flex-1 h-12 px-4 bg-card border border-border rounded-xl text-base text-foreground outline-none focus:ring-2 focus:ring-primary/30"
-            maxLength={14} />
-          <button onClick={() => buscarPorCPF(form.cpf)}
-            disabled={buscandoCPF || form.cpf.length < 11}
-            className="h-12 w-12 gradient-primary text-white rounded-xl flex items-center justify-center active:scale-90 disabled:opacity-40">
-            {buscandoCPF ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
-          </button>
-        </div>
-        {cpfEncontrado && <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Dados preenchidos automaticamente</p>}
-      </div>
-
       {/* Dados Pessoais */}
       <div className="section-card">
         <h2 className="section-title">👤 Dados Pessoais</h2>
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">Nome completo <span className="text-primary">*</span></label>
-          <input type="text" value={form.nome} onChange={e => update('nome', e.target.value)} placeholder="Nome da liderança" className={inputCls} />
+          <input type="text" value={form.nome} onChange={e => handleNomeChange(e.target.value)} placeholder="Nome da liderança" className={inputCls} />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+            CPF
+            {cpfStatus === 'validando' && <Loader2 size={12} className="animate-spin text-muted-foreground" />}
+            {cpfStatus === 'confirmado' && <CheckCircle2 size={12} className="text-emerald-500" />}
+            {cpfStatus === 'divergente' && <AlertCircle size={12} className="text-amber-500" />}
+          </label>
+          <input type="text" inputMode="numeric" value={formatCPF(form.cpf)}
+            onChange={e => handleCPFChange(e.target.value)} placeholder="000.000.000-00"
+            className={`${inputCls} ${cpfBorderCls}`}
+            maxLength={14} />
+          {cpfStatus === 'confirmado' && cpfNomeAPI && (
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✅ CPF confirmado: {cpfNomeAPI}</p>
+          )}
+          {cpfStatus === 'divergente' && cpfNomeAPI && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">⚠️ Nome na Receita: {cpfNomeAPI} — verifique se está correto</p>
+          )}
+          {cpfStatus === 'nao_encontrado' && (
+            <p className="text-xs text-muted-foreground">CPF não encontrado na base externa</p>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1">
