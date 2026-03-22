@@ -1,37 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search as SearchIcon } from 'lucide-react';
+import { ArrowLeft, Search, Loader2, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCPF, cleanCPF, validateCPF } from '@/lib/cpf';
 import { toast } from '@/hooks/use-toast';
 import AppLayout from '@/components/AppLayout';
 
-interface PessoaExistente {
-  id: string;
-  nome: string;
-  cpf: string | null;
-  municipio_eleitoral: string | null;
-}
-
 const tiposLideranca = ['Comunitária', 'Religiosa', 'Sindical', 'Estudantil', 'Empresarial', 'Influenciador digital', 'Liderança de bairro', 'Coordenador regional', 'Outro'];
 const niveis = ['Municipal', 'Zonal', 'Bairro', 'Rua', 'Comunitário', 'Outro'];
-const origens = ['Indicação de outra liderança', 'Abordagem do agente', 'Evento da campanha', 'Redes sociais', 'Espontâneo', 'Outro'];
+const origens = ['Indicação', 'Abordagem do agente', 'Evento', 'Redes sociais', 'Espontâneo', 'Outro'];
 const statusOptions = ['Ativa', 'Potencial', 'Em negociação', 'Fraca', 'Descartada'];
 const comprometimentos = ['Alto', 'Médio', 'Baixo'];
-const situacoesTitulo = ['Regular', 'Cancelado', 'Suspenso', 'Outro / Não informado'];
+const situacoesTitulo = ['Regular', 'Cancelado', 'Suspenso', 'Não informado'];
 
 export default function NovaLideranca() {
   const { usuario } = useAuth();
   const navigate = useNavigate();
-  const [step, setStep] = useState<'cpf' | 'form'>('cpf');
-  const [cpfInput, setCpfInput] = useState('');
-  const [pessoaExistente, setPessoaExistente] = useState<PessoaExistente | null>(null);
-  const [usarPessoaExistente, setUsarPessoaExistente] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [buscandoCPF, setBuscandoCPF] = useState(false);
+  const [pessoaExistenteId, setPessoaExistenteId] = useState<string | null>(null);
+  const [cpfEncontrado, setCpfEncontrado] = useState(false);
   const [liderancasExistentes, setLiderancasExistentes] = useState<{ id: string; nome: string }[]>([]);
 
-  // Form state
   const [form, setForm] = useState({
     cpf: '', nome: '', telefone: '', whatsapp: '', email: '',
     instagram: '', facebook: '',
@@ -46,83 +37,110 @@ export default function NovaLideranca() {
   });
 
   useEffect(() => {
-    fetchLiderancas();
+    supabase.from('liderancas').select('id, pessoas(nome)').eq('status', 'Ativa')
+      .then(({ data }) => {
+        if (data) setLiderancasExistentes(data.map((l: any) => ({ id: l.id, nome: l.pessoas?.nome || '—' })));
+      });
   }, []);
-
-  const fetchLiderancas = async () => {
-    const { data } = await supabase
-      .from('liderancas')
-      .select('id, pessoas(nome)')
-      .eq('status', 'Ativa');
-    if (data) {
-      setLiderancasExistentes(data.map((l: any) => ({ id: l.id, nome: l.pessoas?.nome || '—' })));
-    }
-  };
-
-  const buscarCPF = async () => {
-    const cleaned = cleanCPF(cpfInput);
-    if (cleaned.length === 11 && !validateCPF(cleaned)) {
-      toast({ title: 'CPF inválido', description: 'Verifique os números', variant: 'destructive' });
-      return;
-    }
-    if (cleaned.length < 11) {
-      toast({ title: 'CPF incompleto', variant: 'destructive' });
-      return;
-    }
-    const { data } = await supabase.from('pessoas').select('id, nome, cpf, municipio_eleitoral').eq('cpf', cleaned).single();
-    if (data) {
-      setPessoaExistente(data as PessoaExistente);
-    } else {
-      setForm(f => ({ ...f, cpf: cleaned }));
-      setStep('form');
-    }
-  };
-
-  const usarPessoa = () => {
-    if (pessoaExistente) {
-      setUsarPessoaExistente(true);
-      setForm(f => ({ ...f, cpf: pessoaExistente.cpf || '', nome: pessoaExistente.nome }));
-      setStep('form');
-    }
-  };
-
-  const skipCPF = () => {
-    setStep('form');
-  };
 
   const update = (field: string, value: string) => setForm(f => ({ ...f, [field]: value }));
 
+  // ===== BUSCA AUTOMÁTICA POR CPF =====
+  const buscarPorCPF = async (cpfRaw: string) => {
+    const cleaned = cleanCPF(cpfRaw);
+    if (cleaned.length !== 11) return;
+    if (!validateCPF(cleaned)) {
+      toast({ title: 'CPF inválido', description: 'Verifique os números digitados', variant: 'destructive' });
+      return;
+    }
+
+    setBuscandoCPF(true);
+    setCpfEncontrado(false);
+    setPessoaExistenteId(null);
+
+    try {
+      // Buscar no banco local
+      const { data: pessoa } = await supabase
+        .from('pessoas')
+        .select('*')
+        .eq('cpf', cleaned)
+        .maybeSingle();
+
+      if (pessoa) {
+        // Preencher TODOS os campos automaticamente
+        setForm(f => ({
+          ...f,
+          cpf: pessoa.cpf || cleaned,
+          nome: pessoa.nome || f.nome,
+          telefone: pessoa.telefone || f.telefone,
+          whatsapp: pessoa.whatsapp || f.whatsapp,
+          email: pessoa.email || f.email,
+          instagram: pessoa.instagram || f.instagram,
+          facebook: pessoa.facebook || f.facebook,
+          titulo_eleitor: pessoa.titulo_eleitor || f.titulo_eleitor,
+          zona_eleitoral: pessoa.zona_eleitoral || f.zona_eleitoral,
+          secao_eleitoral: pessoa.secao_eleitoral || f.secao_eleitoral,
+          municipio_eleitoral: pessoa.municipio_eleitoral || f.municipio_eleitoral,
+          uf_eleitoral: pessoa.uf_eleitoral || f.uf_eleitoral,
+          colegio_eleitoral: pessoa.colegio_eleitoral || f.colegio_eleitoral,
+          endereco_colegio: pessoa.endereco_colegio || f.endereco_colegio,
+          situacao_titulo: pessoa.situacao_titulo || f.situacao_titulo,
+        }));
+        setPessoaExistenteId(pessoa.id);
+        setCpfEncontrado(true);
+        toast({ title: '✅ Pessoa encontrada!', description: `Dados de ${pessoa.nome} preenchidos automaticamente` });
+      } else {
+        setForm(f => ({ ...f, cpf: cleaned }));
+        toast({ title: 'CPF não encontrado na base', description: 'Preencha os dados manualmente' });
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setBuscandoCPF(false);
+    }
+  };
+
+  const handleCPFChange = (value: string) => {
+    const cleaned = cleanCPF(value);
+    update('cpf', cleaned);
+    // Auto-buscar quando atingir 11 dígitos
+    if (cleaned.length === 11) {
+      buscarPorCPF(cleaned);
+    } else {
+      setCpfEncontrado(false);
+      setPessoaExistenteId(null);
+    }
+  };
+
   const handleSave = async () => {
-    if (!form.nome.trim()) { toast({ title: 'Nome é obrigatório', variant: 'destructive' }); return; }
-    if (!form.telefone.trim() && !form.whatsapp.trim()) { toast({ title: 'Informe ao menos um telefone ou WhatsApp', variant: 'destructive' }); return; }
+    if (!form.nome.trim()) { toast({ title: 'Preencha o nome', variant: 'destructive' }); return; }
+    if (!form.telefone.trim() && !form.whatsapp.trim()) { toast({ title: 'Informe telefone ou WhatsApp', variant: 'destructive' }); return; }
     if (!form.tipo_lideranca) { toast({ title: 'Selecione o tipo de liderança', variant: 'destructive' }); return; }
-    if (!form.status) { toast({ title: 'Selecione o status', variant: 'destructive' }); return; }
     if (form.cpf && form.cpf.length === 11 && !validateCPF(form.cpf)) { toast({ title: 'CPF inválido', variant: 'destructive' }); return; }
 
     setSaving(true);
     try {
       let pessoaId: string;
 
-      if (usarPessoaExistente && pessoaExistente) {
-        pessoaId = pessoaExistente.id;
-        // Update pessoa data
+      if (pessoaExistenteId) {
+        pessoaId = pessoaExistenteId;
         await supabase.from('pessoas').update({
-          telefone: form.telefone || undefined,
-          whatsapp: form.whatsapp || undefined,
-          email: form.email || undefined,
-          instagram: form.instagram || undefined,
-          facebook: form.facebook || undefined,
-          titulo_eleitor: form.titulo_eleitor || undefined,
-          zona_eleitoral: form.zona_eleitoral || undefined,
-          secao_eleitoral: form.secao_eleitoral || undefined,
-          municipio_eleitoral: form.municipio_eleitoral || undefined,
-          uf_eleitoral: form.uf_eleitoral || undefined,
-          colegio_eleitoral: form.colegio_eleitoral || undefined,
-          endereco_colegio: form.endereco_colegio || undefined,
-          situacao_titulo: form.situacao_titulo || undefined,
+          nome: form.nome,
+          telefone: form.telefone || null,
+          whatsapp: form.whatsapp || null,
+          email: form.email || null,
+          instagram: form.instagram || null,
+          facebook: form.facebook || null,
+          titulo_eleitor: form.titulo_eleitor || null,
+          zona_eleitoral: form.zona_eleitoral || null,
+          secao_eleitoral: form.secao_eleitoral || null,
+          municipio_eleitoral: form.municipio_eleitoral || null,
+          uf_eleitoral: form.uf_eleitoral || null,
+          colegio_eleitoral: form.colegio_eleitoral || null,
+          endereco_colegio: form.endereco_colegio || null,
+          situacao_titulo: form.situacao_titulo || null,
           atualizado_em: new Date().toISOString(),
         }).eq('id', pessoaId);
-        toast({ title: 'Pessoa já cadastrada, reaproveitando dados' });
       } else {
         const { data: novaPessoa, error } = await supabase.from('pessoas').insert({
           cpf: form.cpf || null,
@@ -164,7 +182,7 @@ export default function NovaLideranca() {
       });
       if (lError) throw lError;
 
-      toast({ title: 'Liderança cadastrada com sucesso' });
+      toast({ title: '✅ Liderança cadastrada com sucesso!' });
       navigate('/');
     } catch (err: any) {
       toast({ title: 'Erro ao salvar', description: err.message, variant: 'destructive' });
@@ -173,75 +191,36 @@ export default function NovaLideranca() {
     }
   };
 
-  if (step === 'cpf') {
-    return (
-      <AppLayout title="Nova liderança" showNav={false}>
-        <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm text-muted-foreground mb-4">
-          <ArrowLeft size={16} /> Voltar
-        </button>
-
-        <div className="section-card">
-          <h2 className="section-title">CPF do líder</h2>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={formatCPF(cpfInput)}
-              onChange={e => setCpfInput(cleanCPF(e.target.value))}
-              placeholder="000.000.000-00"
-              className="flex-1 h-12 px-4 bg-card border border-border rounded-xl text-foreground outline-none focus:ring-2 focus:ring-primary/30"
-              maxLength={14}
-            />
-            <button onClick={buscarCPF}
-              className="h-12 px-4 gradient-primary text-white rounded-xl font-medium active:scale-95 transition-transform">
-              <SearchIcon size={18} />
-            </button>
-          </div>
-          <button onClick={skipCPF} className="text-sm text-primary font-medium">
-            Continuar sem CPF →
-          </button>
-        </div>
-
-        {pessoaExistente && (
-          <div className="section-card border-amber-500/30">
-            <p className="text-sm font-medium text-amber-600 dark:text-amber-400">⚠️ Pessoa já cadastrada</p>
-            <p className="text-sm"><strong>Nome:</strong> {pessoaExistente.nome}</p>
-            {pessoaExistente.municipio_eleitoral && <p className="text-sm"><strong>Município:</strong> {pessoaExistente.municipio_eleitoral}</p>}
-            <div className="flex gap-2 pt-1">
-              <button onClick={usarPessoa}
-                className="flex-1 h-10 gradient-primary text-white rounded-xl text-sm font-medium active:scale-95">
-                Usar esta pessoa
-              </button>
-              <button onClick={() => { setPessoaExistente(null); setForm(f => ({ ...f, cpf: cleanCPF(cpfInput) })); setStep('form'); }}
-                className="flex-1 h-10 border border-border rounded-xl text-sm font-medium text-muted-foreground active:scale-95">
-                Criar nova
-              </button>
-            </div>
-          </div>
-        )}
-      </AppLayout>
-    );
-  }
-
-  const InputField = ({ label, field, placeholder, type = 'text', required = false }: { label: string; field: string; placeholder?: string; type?: string; required?: boolean }) => (
+  // ===== COMPONENTES INLINE =====
+  const Field = ({ label, field, placeholder, type = 'text', required = false, readOnly = false }: {
+    label: string; field: string; placeholder?: string; type?: string; required?: boolean; readOnly?: boolean;
+  }) => (
     <div className="space-y-1">
-      <label className="label-micro">{label}{required && <span className="text-primary ml-0.5">*</span>}</label>
+      <label className="text-xs font-medium text-muted-foreground">
+        {label}{required && <span className="text-primary ml-0.5">*</span>}
+      </label>
       <input
         type={type}
         value={(form as any)[field]}
         onChange={e => update(field, e.target.value)}
         placeholder={placeholder}
-        className="w-full h-11 px-3 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30"
+        readOnly={readOnly}
+        className={`w-full h-11 px-3 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 transition-shadow ${readOnly ? 'opacity-60' : ''}`}
       />
     </div>
   );
 
-  const SelectField = ({ label, field, options, required = false }: { label: string; field: string; options: string[]; required?: boolean }) => (
+  const Select = ({ label, field, options, required = false }: {
+    label: string; field: string; options: string[]; required?: boolean;
+  }) => (
     <div className="space-y-1">
-      <label className="label-micro">{label}{required && <span className="text-primary ml-0.5">*</span>}</label>
+      <label className="text-xs font-medium text-muted-foreground">
+        {label}{required && <span className="text-primary ml-0.5">*</span>}
+      </label>
       <select
         value={(form as any)[field]}
         onChange={e => update(field, e.target.value)}
-        className="w-full h-11 px-3 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30"
+        className="w-full h-11 px-3 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
       >
         <option value="">Selecione...</option>
         {options.map(o => <option key={o} value={o}>{o}</option>)}
@@ -249,114 +228,128 @@ export default function NovaLideranca() {
     </div>
   );
 
+  const TextArea = ({ label, field, placeholder, rows = 2 }: {
+    label: string; field: string; placeholder?: string; rows?: number;
+  }) => (
+    <div className="space-y-1">
+      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <textarea
+        value={(form as any)[field]}
+        onChange={e => update(field, e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        className="w-full px-3 py-2 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 resize-none transition-shadow"
+      />
+    </div>
+  );
+
   return (
-    <AppLayout title="Nova liderança" showNav={false}>
-      <button onClick={() => setStep('cpf')} className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
+    <AppLayout title="Nova Liderança" showNav={false}>
+      <button onClick={() => navigate('/')} className="flex items-center gap-1 text-sm text-muted-foreground mb-3 active:scale-95">
         <ArrowLeft size={16} /> Voltar
       </button>
 
-      {/* Seção 1 — Dados Pessoais */}
-      <div className="section-card">
-        <h2 className="section-title">Dados Pessoais</h2>
-        <InputField label="CPF" field="cpf" placeholder="Apenas números" />
-        <InputField label="Nome completo" field="nome" required />
-        <div className="grid grid-cols-2 gap-3">
-          <InputField label="Telefone" field="telefone" placeholder="(00) 0000-0000" />
-          <InputField label="WhatsApp" field="whatsapp" placeholder="(00) 00000-0000" />
+      {/* ===== CPF — BUSCA RÁPIDA ===== */}
+      <div className="section-card !space-y-2">
+        <h2 className="section-title flex items-center gap-2">
+          🔍 Buscar por CPF
+          {cpfEncontrado && <CheckCircle2 size={16} className="text-emerald-500" />}
+        </h2>
+        <p className="text-xs text-muted-foreground -mt-1">
+          Digite o CPF para buscar dados já cadastrados automaticamente
+        </p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            inputMode="numeric"
+            value={formatCPF(form.cpf)}
+            onChange={e => handleCPFChange(e.target.value)}
+            placeholder="000.000.000-00"
+            className="flex-1 h-12 px-4 bg-card border border-border rounded-xl text-base text-foreground outline-none focus:ring-2 focus:ring-primary/30"
+            maxLength={14}
+          />
+          <button
+            onClick={() => buscarPorCPF(form.cpf)}
+            disabled={buscandoCPF || form.cpf.length < 11}
+            className="h-12 w-12 gradient-primary text-white rounded-xl flex items-center justify-center active:scale-90 transition-transform disabled:opacity-40"
+          >
+            {buscandoCPF ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
+          </button>
         </div>
-        <InputField label="E-mail" field="email" type="email" />
+        {cpfEncontrado && (
+          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+            ✅ Dados preenchidos automaticamente
+          </p>
+        )}
+      </div>
+
+      {/* ===== DADOS PESSOAIS ===== */}
+      <div className="section-card">
+        <h2 className="section-title">👤 Dados Pessoais</h2>
+        <Field label="Nome completo" field="nome" required placeholder="Nome da liderança" />
         <div className="grid grid-cols-2 gap-3">
-          <InputField label="Instagram" field="instagram" placeholder="@usuario" />
-          <InputField label="Facebook" field="facebook" />
+          <Field label="Telefone" field="telefone" placeholder="(00) 0000-0000" type="tel" />
+          <Field label="WhatsApp" field="whatsapp" placeholder="(00) 00000-0000" type="tel" />
+        </div>
+        <Field label="E-mail" field="email" type="email" placeholder="email@exemplo.com" />
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Instagram" field="instagram" placeholder="@usuario" />
+          <Field label="Facebook" field="facebook" placeholder="Nome ou link" />
         </div>
       </div>
 
-      {/* Seção 2 — Dados Eleitorais */}
+      {/* ===== DADOS ELEITORAIS ===== */}
       <div className="section-card">
-        <h2 className="section-title">Dados Eleitorais</h2>
-        <p className="text-micro text-muted-foreground -mt-1">Dados importantes para a campanha</p>
-        <InputField label="Título de eleitor" field="titulo_eleitor" />
+        <h2 className="section-title">🗳️ Dados Eleitorais</h2>
+        <p className="text-xs text-muted-foreground -mt-1">Informações importantes para a campanha</p>
+        <Field label="Título de eleitor" field="titulo_eleitor" placeholder="Número do título" />
         <div className="grid grid-cols-2 gap-3">
-          <InputField label="Zona eleitoral" field="zona_eleitoral" />
-          <InputField label="Seção eleitoral" field="secao_eleitoral" />
+          <Field label="Zona eleitoral" field="zona_eleitoral" placeholder="Ex: 045" />
+          <Field label="Seção eleitoral" field="secao_eleitoral" placeholder="Ex: 0123" />
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div className="col-span-2">
-            <InputField label="Município eleitoral" field="municipio_eleitoral" />
+            <Field label="Município eleitoral" field="municipio_eleitoral" placeholder="Cidade" />
           </div>
-          <InputField label="UF" field="uf_eleitoral" placeholder="SP" />
+          <Field label="UF" field="uf_eleitoral" placeholder="GO" />
         </div>
-        <InputField label="Colégio eleitoral" field="colegio_eleitoral" placeholder="Nome da escola / local" />
-        <div className="space-y-1">
-          <label className="label-micro">Endereço do colégio</label>
-          <textarea
-            value={form.endereco_colegio}
-            onChange={e => update('endereco_colegio', e.target.value)}
-            rows={2}
-            className="w-full px-3 py-2 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-          />
-        </div>
-        <SelectField label="Situação do título" field="situacao_titulo" options={situacoesTitulo} />
+        <Field label="Colégio eleitoral" field="colegio_eleitoral" placeholder="Nome da escola / local de votação" />
+        <TextArea label="Endereço do colégio" field="endereco_colegio" placeholder="Rua, número, bairro..." />
+        <Select label="Situação do título" field="situacao_titulo" options={situacoesTitulo} />
       </div>
 
-      {/* Seção 3 — Perfil da Liderança */}
+      {/* ===== PERFIL + STATUS (simplificado) ===== */}
       <div className="section-card">
-        <h2 className="section-title">Perfil da Liderança</h2>
-        <SelectField label="Tipo de liderança" field="tipo_lideranca" options={tiposLideranca} required />
-        <SelectField label="Nível" field="nivel" options={niveis} />
+        <h2 className="section-title">⭐ Perfil e Status</h2>
+        <Select label="Tipo de liderança" field="tipo_lideranca" options={tiposLideranca} required />
+        <Select label="Nível" field="nivel" options={niveis} />
+        <TextArea label="Região de atuação" field="regiao_atuacao" placeholder="Bairro X, Comunidade Y..." />
+        <Field label="Zona de atuação" field="zona_atuacao" placeholder="Zona onde mais atua" />
+        <TextArea label="Bairros de influência" field="bairros_influencia" placeholder="Separados por vírgula" />
+        <TextArea label="Comunidades de influência" field="comunidades_influencia" placeholder="Separados por vírgula" />
         <div className="space-y-1">
-          <label className="label-micro">Região de atuação</label>
-          <textarea
-            value={form.regiao_atuacao}
-            onChange={e => update('regiao_atuacao', e.target.value)}
-            rows={2}
-            placeholder="Bairro X, Comunidade Y, entorno do Colégio Z"
-            className="w-full px-3 py-2 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-          />
-        </div>
-        <InputField label="Zona de atuação" field="zona_atuacao" />
-        <div className="space-y-1">
-          <label className="label-micro">Bairros de influência</label>
-          <textarea value={form.bairros_influencia} onChange={e => update('bairros_influencia', e.target.value)}
-            rows={2} className="w-full px-3 py-2 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
-        </div>
-        <div className="space-y-1">
-          <label className="label-micro">Comunidades de influência</label>
-          <textarea value={form.comunidades_influencia} onChange={e => update('comunidades_influencia', e.target.value)}
-            rows={2} className="w-full px-3 py-2 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
-        </div>
-        <div className="space-y-1">
-          <label className="label-micro">Liderança principal</label>
+          <label className="text-xs font-medium text-muted-foreground">Liderança principal (superior)</label>
           <select value={form.lider_principal_id} onChange={e => update('lider_principal_id', e.target.value)}
             className="w-full h-11 px-3 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30">
-            <option value="">Nenhuma (topo da hierarquia)</option>
+            <option value="">Nenhuma</option>
             {liderancasExistentes.map(l => <option key={l.id} value={l.id}>{l.nome}</option>)}
           </select>
         </div>
-        <SelectField label="Origem da captação" field="origem_captacao" options={origens} />
-      </div>
-
-      {/* Seção 4 — Força Política */}
-      <div className="section-card">
-        <h2 className="section-title">Força Política e Status</h2>
+        <Select label="Origem da captação" field="origem_captacao" options={origens} />
         <div className="grid grid-cols-2 gap-3">
-          <InputField label="Apoiadores estimados" field="apoiadores_estimados" type="number" />
-          <InputField label="Meta de votos" field="meta_votos" type="number" />
+          <Field label="Apoiadores estimados" field="apoiadores_estimados" type="number" placeholder="0" />
+          <Field label="Meta de votos" field="meta_votos" type="number" placeholder="0" />
         </div>
-        <SelectField label="Status" field="status" options={statusOptions} required />
-        <SelectField label="Nível de comprometimento" field="nivel_comprometimento" options={comprometimentos} />
-        <div className="space-y-1">
-          <label className="label-micro">Observações internas</label>
-          <textarea value={form.observacoes} onChange={e => update('observacoes', e.target.value)}
-            rows={3} className="w-full px-3 py-2 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
-        </div>
+        <Select label="Status" field="status" options={statusOptions} required />
+        <Select label="Comprometimento" field="nivel_comprometimento" options={comprometimentos} />
+        <TextArea label="Observações internas" field="observacoes" rows={3} placeholder="Anotações sobre esta liderança..." />
       </div>
 
-      {/* Buttons */}
-      <div className="space-y-3 pb-4">
+      {/* ===== BOTÕES ===== */}
+      <div className="space-y-3 pb-6">
         <button onClick={handleSave} disabled={saving}
-          className="w-full h-12 gradient-primary text-white font-semibold rounded-xl shadow-lg shadow-pink-500/25 active:scale-[0.97] transition-all disabled:opacity-50">
-          {saving ? 'Salvando...' : 'Salvar liderança'}
+          className="w-full h-14 gradient-primary text-white text-base font-semibold rounded-2xl shadow-lg shadow-pink-500/25 active:scale-[0.97] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+          {saving ? <><Loader2 size={20} className="animate-spin" /> Salvando...</> : '✅ Salvar Liderança'}
         </button>
         <button onClick={() => navigate('/')}
           className="w-full h-12 border border-border rounded-xl text-muted-foreground font-medium active:scale-[0.97] transition-all">
