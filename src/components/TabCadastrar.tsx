@@ -58,10 +58,9 @@ export default function TabCadastrar({ onSaved }: Props) {
     if (validandoCPF) return;
     setValidandoCPF(true);
     setCpfStatus('validando');
-    setCpfNomeAPI('');
+    setCpfNomePessoa('');
     setPessoaExistenteId(null);
     try {
-      // 1) Busca local — preenche tudo se já cadastrado
       const { data: pessoa } = await supabase.from('pessoas').select('*').eq('cpf', cpfClean).maybeSingle();
       if (pessoa) {
         setForm(f => ({
@@ -80,60 +79,24 @@ export default function TabCadastrar({ onSaved }: Props) {
         }));
         setPessoaExistenteId(pessoa.id);
         setCpfStatus('confirmado');
-        setCpfNomeAPI(pessoa.nome);
+        setCpfNomePessoa(pessoa.nome);
         toast({ title: '✅ Pessoa já cadastrada!', description: `Dados de ${pessoa.nome} preenchidos` });
-        return;
+      } else {
+        setCpfStatus('idle');
       }
-
-      // 2) Valida na API externa — apenas confirma nome
-      try {
-        const { data: apiData, error: fnError } = await supabase.functions.invoke('consultar-cpf', {
-          body: { cpf: cpfClean },
-        });
-        if (!fnError && apiData?.found && apiData.nome) {
-          setCpfNomeAPI(apiData.nome);
-          // Compara nome digitado com nome da API
-          const nomeForm = form.nome.trim().toLowerCase();
-          const nomeApi = apiData.nome.trim().toLowerCase();
-          if (!nomeForm || nomeApi.includes(nomeForm) || nomeForm.includes(nomeApi)) {
-            setCpfStatus('confirmado');
-          } else {
-            setCpfStatus('divergente');
-          }
-          return;
-        }
-      } catch (apiErr) {
-        console.warn('API externa indisponível:', apiErr);
-      }
-
-      setCpfStatus('nao_encontrado');
     } catch (err) { console.error(err); }
     finally { setValidandoCPF(false); }
-  }, [validandoCPF, form.nome]);
+  }, [validandoCPF]);
 
   const handleCPFChange = (value: string) => {
     const cleaned = cleanCPF(value);
     update('cpf', cleaned);
     setCpfStatus('idle');
-    setCpfNomeAPI('');
+    setCpfNomePessoa('');
     setPessoaExistenteId(null);
     if (cpfTimeoutRef.current) clearTimeout(cpfTimeoutRef.current);
     if (cleaned.length === 11) {
       cpfTimeoutRef.current = setTimeout(() => validarCPF(cleaned), 500);
-    }
-  };
-
-  // Re-validar quando nome muda e CPF já está completo
-  const handleNomeChange = (value: string) => {
-    update('nome', value);
-    if (cpfNomeAPI && form.cpf.length === 11) {
-      const nomeApi = cpfNomeAPI.trim().toLowerCase();
-      const nomeDigitado = value.trim().toLowerCase();
-      if (!nomeDigitado || nomeApi.includes(nomeDigitado) || nomeDigitado.includes(nomeApi)) {
-        setCpfStatus('confirmado');
-      } else {
-        setCpfStatus('divergente');
-      }
     }
   };
 
