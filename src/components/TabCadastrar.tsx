@@ -5,9 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { formatCPF, cleanCPF, validateCPF } from '@/lib/cpf';
 import { toast } from '@/hooks/use-toast';
 
-const tiposLideranca = ['Comunitária', 'Religiosa', 'Sindical', 'Estudantil', 'Empresarial', 'Influenciador digital', 'Liderança de bairro', 'Coordenador regional', 'Outro'];
-const niveis = ['Municipal', 'Zonal', 'Bairro', 'Rua', 'Comunitário', 'Outro'];
-const origens = ['Indicação', 'Abordagem do agente', 'Evento', 'Redes sociais', 'Espontâneo', 'Outro'];
+const statusOptions = ['Ativa', 'Potencial', 'Em negociação', 'Fraca', 'Descartada'];
 const statusOptions = ['Ativa', 'Potencial', 'Em negociação', 'Fraca', 'Descartada'];
 const comprometimentos = ['Alto', 'Médio', 'Baixo'];
 const situacoesTitulo = ['Regular', 'Cancelado', 'Suspenso', 'Não informado'];
