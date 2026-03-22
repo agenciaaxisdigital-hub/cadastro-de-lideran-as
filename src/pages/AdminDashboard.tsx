@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   ArrowLeft, Users, TrendingUp, Award, Activity, ChevronDown, ChevronUp,
   Phone, Mail, MapPin, Calendar, Crown, Clock, Hash, UserCheck, UserX,
-  Zap, Target, Star, AlertTriangle
+  Zap, Target, Star, AlertTriangle, UserPlus, Shield, Loader2
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
