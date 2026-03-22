@@ -70,9 +70,14 @@ export default function AdminDashboard() {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
   const [liderancas, setLiderancas] = useState<Lideranca[]>([]);
-  const [agentes, setAgentes] = useState<Agente[]>([]);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedAgente, setExpandedAgente] = useState<string | null>(null);
+  const [showCriarUsuario, setShowCriarUsuario] = useState(false);
+  const [novoNome, setNovoNome] = useState('');
+  const [novoSenha, setNovoSenha] = useState('');
+  const [novoTipo, setNovoTipo] = useState<'agente' | 'admin'>('agente');
+  const [criandoUsuario, setCriandoUsuario] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) { navigate('/'); return; }
