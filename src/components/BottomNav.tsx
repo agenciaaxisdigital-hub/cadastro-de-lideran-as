@@ -1,5 +1,6 @@
-import { PlusCircle, List, UserCircle } from 'lucide-react';
+import { PlusCircle, List, UserCircle, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export type TabId = 'cadastrar' | 'liderancas' | 'perfil';
 
@@ -10,6 +11,7 @@ interface Props {
 
 export default function BottomNav({ active, onChange }: Props) {
   const { isAdmin } = useAuth();
+  const navigate = useNavigate();
 
   const tabs: { id: TabId; icon: typeof PlusCircle; label: string }[] = [
     { id: 'cadastrar', icon: PlusCircle, label: 'Cadastrar' },
@@ -37,6 +39,15 @@ export default function BottomNav({ active, onChange }: Props) {
             </button>
           );
         })}
+        {isAdmin && (
+          <button
+            onClick={() => navigate('/admin')}
+            className="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all active:scale-90 text-muted-foreground"
+          >
+            <BarChart3 size={24} strokeWidth={1.5} />
+            <span className="text-[11px] font-medium">Dashboard</span>
+          </button>
+        )}
       </div>
     </nav>
   );
