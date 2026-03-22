@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCPF, cleanCPF, validateCPF } from '@/lib/cpf';
@@ -33,8 +33,8 @@ export default function TabCadastrar({ onSaved }: Props) {
   const { usuario } = useAuth();
   const [saving, setSaving] = useState(false);
   const [validandoCPF, setValidandoCPF] = useState(false);
-  const [cpfStatus, setCpfStatus] = useState<'idle' | 'validando' | 'confirmado' | 'divergente' | 'nao_encontrado'>('idle');
-  const [cpfNomeAPI, setCpfNomeAPI] = useState('');
+  const [cpfStatus, setCpfStatus] = useState<'idle' | 'validando' | 'confirmado'>('idle');
+  const [cpfNomePessoa, setCpfNomePessoa] = useState('');
   const [pessoaExistenteId, setPessoaExistenteId] = useState<string | null>(null);
   const [liderancasExistentes, setLiderancasExistentes] = useState<{ id: string; nome: string }[]>([]);
   const [form, setForm] = useState({ ...emptyForm });
@@ -58,10 +58,9 @@ export default function TabCadastrar({ onSaved }: Props) {
     if (validandoCPF) return;
     setValidandoCPF(true);
     setCpfStatus('validando');
-    setCpfNomeAPI('');
+    setCpfNomePessoa('');
     setPessoaExistenteId(null);
     try {
-      // 1) Busca local — preenche tudo se já cadastrado
       const { data: pessoa } = await supabase.from('pessoas').select('*').eq('cpf', cpfClean).maybeSingle();
       if (pessoa) {
         setForm(f => ({
@@ -80,60 +79,24 @@ export default function TabCadastrar({ onSaved }: Props) {
         }));
         setPessoaExistenteId(pessoa.id);
         setCpfStatus('confirmado');
-        setCpfNomeAPI(pessoa.nome);
+        setCpfNomePessoa(pessoa.nome);
         toast({ title: '✅ Pessoa já cadastrada!', description: `Dados de ${pessoa.nome} preenchidos` });
-        return;
+      } else {
+        setCpfStatus('idle');
       }
-
-      // 2) Valida na API externa — apenas confirma nome
-      try {
-        const { data: apiData, error: fnError } = await supabase.functions.invoke('consultar-cpf', {
-          body: { cpf: cpfClean },
-        });
-        if (!fnError && apiData?.found && apiData.nome) {
-          setCpfNomeAPI(apiData.nome);
-          // Compara nome digitado com nome da API
-          const nomeForm = form.nome.trim().toLowerCase();
-          const nomeApi = apiData.nome.trim().toLowerCase();
-          if (!nomeForm || nomeApi.includes(nomeForm) || nomeForm.includes(nomeApi)) {
-            setCpfStatus('confirmado');
-          } else {
-            setCpfStatus('divergente');
-          }
-          return;
-        }
-      } catch (apiErr) {
-        console.warn('API externa indisponível:', apiErr);
-      }
-
-      setCpfStatus('nao_encontrado');
     } catch (err) { console.error(err); }
     finally { setValidandoCPF(false); }
-  }, [validandoCPF, form.nome]);
+  }, [validandoCPF]);
 
   const handleCPFChange = (value: string) => {
     const cleaned = cleanCPF(value);
     update('cpf', cleaned);
     setCpfStatus('idle');
-    setCpfNomeAPI('');
+    setCpfNomePessoa('');
     setPessoaExistenteId(null);
     if (cpfTimeoutRef.current) clearTimeout(cpfTimeoutRef.current);
     if (cleaned.length === 11) {
       cpfTimeoutRef.current = setTimeout(() => validarCPF(cleaned), 500);
-    }
-  };
-
-  // Re-validar quando nome muda e CPF já está completo
-  const handleNomeChange = (value: string) => {
-    update('nome', value);
-    if (cpfNomeAPI && form.cpf.length === 11) {
-      const nomeApi = cpfNomeAPI.trim().toLowerCase();
-      const nomeDigitado = value.trim().toLowerCase();
-      if (!nomeDigitado || nomeApi.includes(nomeDigitado) || nomeDigitado.includes(nomeApi)) {
-        setCpfStatus('confirmado');
-      } else {
-        setCpfStatus('divergente');
-      }
     }
   };
 
@@ -189,7 +152,7 @@ export default function TabCadastrar({ onSaved }: Props) {
       setForm({ ...emptyForm });
       setPessoaExistenteId(null);
       setCpfStatus('idle');
-      setCpfNomeAPI('');
+      setCpfNomePessoa('');
       onSaved();
     } catch (err: any) {
       toast({ title: 'Erro ao salvar', description: err.message, variant: 'destructive' });
@@ -200,9 +163,7 @@ export default function TabCadastrar({ onSaved }: Props) {
   const selectCls = inputCls;
   const textareaCls = "w-full px-3 py-2 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 resize-none";
 
-  const cpfBorderCls = cpfStatus === 'confirmado' ? 'border-emerald-500 ring-1 ring-emerald-500/30'
-    : cpfStatus === 'divergente' ? 'border-amber-500 ring-1 ring-amber-500/30'
-    : '';
+  const cpfBorderCls = cpfStatus === 'confirmado' ? 'border-emerald-500 ring-1 ring-emerald-500/30' : '';
 
   return (
     <div className="space-y-4 pb-24">
@@ -211,27 +172,20 @@ export default function TabCadastrar({ onSaved }: Props) {
         <h2 className="section-title">👤 Dados Pessoais</h2>
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">Nome completo <span className="text-primary">*</span></label>
-          <input type="text" value={form.nome} onChange={e => handleNomeChange(e.target.value)} placeholder="Nome da liderança" className={inputCls} />
+          <input type="text" value={form.nome} onChange={e => update('nome', e.target.value)} placeholder="Nome da liderança" className={inputCls} />
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
             CPF
             {cpfStatus === 'validando' && <Loader2 size={12} className="animate-spin text-muted-foreground" />}
             {cpfStatus === 'confirmado' && <CheckCircle2 size={12} className="text-emerald-500" />}
-            {cpfStatus === 'divergente' && <AlertCircle size={12} className="text-amber-500" />}
           </label>
           <input type="text" inputMode="numeric" value={formatCPF(form.cpf)}
             onChange={e => handleCPFChange(e.target.value)} placeholder="000.000.000-00"
             className={`${inputCls} ${cpfBorderCls}`}
             maxLength={14} />
-          {cpfStatus === 'confirmado' && cpfNomeAPI && (
-            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✅ CPF confirmado: {cpfNomeAPI}</p>
-          )}
-          {cpfStatus === 'divergente' && cpfNomeAPI && (
-            <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">⚠️ Nome na Receita: {cpfNomeAPI} — verifique se está correto</p>
-          )}
-          {cpfStatus === 'nao_encontrado' && (
-            <p className="text-xs text-muted-foreground">CPF não encontrado na base externa</p>
+          {cpfStatus === 'confirmado' && cpfNomePessoa && (
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✅ Pessoa encontrada: {cpfNomePessoa}</p>
           )}
         </div>
         <div className="grid grid-cols-2 gap-2">
