@@ -25,7 +25,7 @@ export default function DetalheLideranca() {
       .from('liderancas')
       .select('*, pessoas(*), usuarios(nome)')
       .eq('id', id!)
-      .single();
+      .maybeSingle();
     if (!error) setData(data);
     setLoading(false);
   };
