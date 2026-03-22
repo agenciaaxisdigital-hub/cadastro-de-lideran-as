@@ -47,13 +47,14 @@ export default function TabCadastrar({ onSaved }: Props) {
 
   const update = useCallback((field: string, value: string) => setForm(f => ({ ...f, [field]: value })), []);
 
-  const buscarPorCPF = async (cpfRaw: string) => {
+  const buscarPorCPF = useCallback(async (cpfRaw: string) => {
     const cleaned = cleanCPF(cpfRaw);
     if (cleaned.length !== 11) return;
     if (!validateCPF(cleaned)) {
-      toast({ title: 'CPF inválido', variant: 'destructive' });
+      toast({ title: 'CPF inválido', description: 'Verifique os números digitados', variant: 'destructive' });
       return;
     }
+    if (buscandoCPF) return;
     setBuscandoCPF(true);
     setCpfEncontrado(false);
     setPessoaExistenteId(null);
@@ -76,20 +77,26 @@ export default function TabCadastrar({ onSaved }: Props) {
         }));
         setPessoaExistenteId(pessoa.id);
         setCpfEncontrado(true);
-        toast({ title: '✅ Pessoa encontrada!', description: `Dados de ${pessoa.nome} preenchidos` });
+        toast({ title: '✅ Pessoa encontrada!', description: `Dados de ${pessoa.nome} preenchidos automaticamente` });
       } else {
         setForm(f => ({ ...f, cpf: cleaned }));
-        toast({ title: 'CPF não encontrado', description: 'Preencha manualmente' });
+        toast({ title: 'CPF não encontrado na base', description: 'Essa pessoa ainda não foi cadastrada. Preencha os dados abaixo.' });
       }
     } catch (err) { console.error(err); }
     finally { setBuscandoCPF(false); }
-  };
+  }, [buscandoCPF]);
+
+  const cpfTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleCPFChange = (value: string) => {
     const cleaned = cleanCPF(value);
     update('cpf', cleaned);
-    if (cleaned.length === 11) buscarPorCPF(cleaned);
-    else { setCpfEncontrado(false); setPessoaExistenteId(null); }
+    setCpfEncontrado(false);
+    setPessoaExistenteId(null);
+    if (cpfTimeoutRef.current) clearTimeout(cpfTimeoutRef.current);
+    if (cleaned.length === 11) {
+      cpfTimeoutRef.current = setTimeout(() => buscarPorCPF(cleaned), 400);
+    }
   };
 
   const handleSave = async () => {
