@@ -172,27 +172,20 @@ export default function TabCadastrar({ onSaved }: Props) {
         <h2 className="section-title">👤 Dados Pessoais</h2>
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">Nome completo <span className="text-primary">*</span></label>
-          <input type="text" value={form.nome} onChange={e => handleNomeChange(e.target.value)} placeholder="Nome da liderança" className={inputCls} />
+          <input type="text" value={form.nome} onChange={e => update('nome', e.target.value)} placeholder="Nome da liderança" className={inputCls} />
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
             CPF
             {cpfStatus === 'validando' && <Loader2 size={12} className="animate-spin text-muted-foreground" />}
             {cpfStatus === 'confirmado' && <CheckCircle2 size={12} className="text-emerald-500" />}
-            {cpfStatus === 'divergente' && <AlertCircle size={12} className="text-amber-500" />}
           </label>
           <input type="text" inputMode="numeric" value={formatCPF(form.cpf)}
             onChange={e => handleCPFChange(e.target.value)} placeholder="000.000.000-00"
             className={`${inputCls} ${cpfBorderCls}`}
             maxLength={14} />
-          {cpfStatus === 'confirmado' && cpfNomeAPI && (
-            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✅ CPF confirmado: {cpfNomeAPI}</p>
-          )}
-          {cpfStatus === 'divergente' && cpfNomeAPI && (
-            <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">⚠️ Nome na Receita: {cpfNomeAPI} — verifique se está correto</p>
-          )}
-          {cpfStatus === 'nao_encontrado' && (
-            <p className="text-xs text-muted-foreground">CPF não encontrado na base externa</p>
+          {cpfStatus === 'confirmado' && cpfNomePessoa && (
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✅ Pessoa encontrada: {cpfNomePessoa}</p>
           )}
         </div>
         <div className="grid grid-cols-2 gap-2">
