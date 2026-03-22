@@ -1,14 +1,13 @@
 import { useAuth } from '@/contexts/AuthContext';
-import AppLayout from '@/components/AppLayout';
 import { LogOut, Shield, User } from 'lucide-react';
 
-export default function Perfil() {
+export default function TabPerfil() {
   const { usuario, signOut } = useAuth();
 
   return (
-    <AppLayout title="Perfil">
-      <div className="section-card items-center text-center">
-        <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center mx-auto">
+    <div className="space-y-4 pb-24">
+      <div className="section-card flex flex-col items-center text-center">
+        <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center">
           {usuario?.tipo === 'admin' ? <Shield size={28} className="text-white" /> : <User size={28} className="text-white" />}
         </div>
         <h2 className="text-lg font-bold text-foreground mt-3">{usuario?.nome || '—'}</h2>
@@ -22,7 +21,7 @@ export default function Perfil() {
         <LogOut size={18} /> Sair
       </button>
 
-      <p className="text-center text-micro text-muted-foreground">v1.0 · Lideranças – Dra. Fernanda Sarelli</p>
-    </AppLayout>
+      <p className="text-center text-[10px] text-muted-foreground">v1.0 · Lideranças – Dra. Fernanda Sarelli</p>
+    </div>
   );
 }

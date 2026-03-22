@@ -4,12 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Login from "./pages/Login";
-import Liderancas from "./pages/Liderancas";
-import NovaLideranca from "./pages/NovaLideranca";
-import DetalheLideranca from "./pages/DetalheLideranca";
-import Busca from "./pages/Busca";
-import Ranking from "./pages/Ranking";
-import Perfil from "./pages/Perfil";
+import Home from "./pages/Home";
 
 const queryClient = new QueryClient();
 
@@ -31,12 +26,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-      <Route path="/" element={<PrivateRoute><Liderancas /></PrivateRoute>} />
-      <Route path="/nova-lideranca" element={<PrivateRoute><NovaLideranca /></PrivateRoute>} />
-      <Route path="/lideranca/:id" element={<PrivateRoute><DetalheLideranca /></PrivateRoute>} />
-      <Route path="/buscar" element={<PrivateRoute><Busca /></PrivateRoute>} />
-      <Route path="/ranking" element={<PrivateRoute><Ranking /></PrivateRoute>} />
-      <Route path="/perfil" element={<PrivateRoute><Perfil /></PrivateRoute>} />
+      <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
