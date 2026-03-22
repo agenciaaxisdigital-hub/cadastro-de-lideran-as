@@ -73,11 +73,6 @@ export default function AdminDashboard() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedAgente, setExpandedAgente] = useState<string | null>(null);
-  const [showCriarUsuario, setShowCriarUsuario] = useState(false);
-  const [novoNome, setNovoNome] = useState('');
-  const [novoSenha, setNovoSenha] = useState('');
-  const [novoTipo, setNovoTipo] = useState<'agente' | 'admin'>('agente');
-  const [criandoUsuario, setCriandoUsuario] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) { navigate('/'); return; }
@@ -95,22 +90,6 @@ export default function AdminDashboard() {
   };
 
   const agentes = usuarios.filter(u => u.tipo === 'agente');
-
-  const handleCriarUsuario = async () => {
-    if (!novoNome.trim() || !novoSenha.trim()) return;
-    setCriandoUsuario(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('criar-usuario', {
-        body: { nome: novoNome.trim(), senha: novoSenha, tipo: novoTipo },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setNovoNome(''); setNovoSenha(''); setNovoTipo('agente'); setShowCriarUsuario(false);
-      fetchData();
-    } catch (err: any) {
-      alert('Erro: ' + (err.message || 'Falha ao criar usuário'));
-    } finally { setCriandoUsuario(false); }
-  };
 
   // ── Métricas gerais ──
   const totalLiderancas = liderancas.length;
