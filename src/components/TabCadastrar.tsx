@@ -59,6 +59,7 @@ export default function TabCadastrar({ onSaved }: Props) {
     setCpfEncontrado(false);
     setPessoaExistenteId(null);
     try {
+      // 1) Busca local
       const { data: pessoa } = await supabase.from('pessoas').select('*').eq('cpf', cleaned).maybeSingle();
       if (pessoa) {
         setForm(f => ({
@@ -77,11 +78,32 @@ export default function TabCadastrar({ onSaved }: Props) {
         }));
         setPessoaExistenteId(pessoa.id);
         setCpfEncontrado(true);
-        toast({ title: '✅ Pessoa encontrada!', description: `Dados de ${pessoa.nome} preenchidos automaticamente` });
-      } else {
-        setForm(f => ({ ...f, cpf: cleaned }));
-        toast({ title: 'CPF não encontrado na base', description: 'Essa pessoa ainda não foi cadastrada. Preencha os dados abaixo.' });
+        toast({ title: '✅ Pessoa encontrada na base!', description: `Dados de ${pessoa.nome} preenchidos` });
+        return;
       }
+
+      // 2) Busca na API externa (cpf-brasil.org)
+      try {
+        const { data: apiData, error: fnError } = await supabase.functions.invoke('consultar-cpf', {
+          body: { cpf: cleaned },
+        });
+        if (!fnError && apiData?.found && apiData.nome) {
+          setForm(f => ({
+            ...f,
+            cpf: cleaned,
+            nome: apiData.nome || f.nome,
+          }));
+          setCpfEncontrado(true);
+          toast({ title: '✅ CPF encontrado!', description: `Nome: ${apiData.nome} (dados da Receita Federal)` });
+          return;
+        }
+      } catch (apiErr) {
+        console.warn('API externa indisponível:', apiErr);
+      }
+
+      // 3) Nenhum resultado
+      setForm(f => ({ ...f, cpf: cleaned }));
+      toast({ title: 'CPF não encontrado', description: 'Preencha os dados manualmente' });
     } catch (err) { console.error(err); }
     finally { setBuscandoCPF(false); }
   }, [buscandoCPF]);
