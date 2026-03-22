@@ -5,9 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { formatCPF, cleanCPF, validateCPF } from '@/lib/cpf';
 import { toast } from '@/hooks/use-toast';
 
-const tiposLideranca = ['Comunitária', 'Religiosa', 'Sindical', 'Estudantil', 'Empresarial', 'Influenciador digital', 'Liderança de bairro', 'Coordenador regional', 'Outro'];
-const niveis = ['Municipal', 'Zonal', 'Bairro', 'Rua', 'Comunitário', 'Outro'];
-const origens = ['Indicação', 'Abordagem do agente', 'Evento', 'Redes sociais', 'Espontâneo', 'Outro'];
 const statusOptions = ['Ativa', 'Potencial', 'Em negociação', 'Fraca', 'Descartada'];
 const comprometimentos = ['Alto', 'Médio', 'Baixo'];
 const situacoesTitulo = ['Regular', 'Cancelado', 'Suspenso', 'Não informado'];
@@ -103,7 +100,6 @@ export default function TabCadastrar({ onSaved }: Props) {
   const handleSave = async () => {
     if (!form.nome.trim()) { toast({ title: 'Preencha o nome', variant: 'destructive' }); return; }
     if (!form.telefone.trim() && !form.whatsapp.trim()) { toast({ title: 'Informe telefone ou WhatsApp', variant: 'destructive' }); return; }
-    if (!form.tipo_lideranca) { toast({ title: 'Selecione o tipo de liderança', variant: 'destructive' }); return; }
     if (form.cpf && form.cpf.length === 11 && !validateCPF(form.cpf)) { toast({ title: 'CPF inválido', variant: 'destructive' }); return; }
 
     setSaving(true);
@@ -267,48 +263,16 @@ export default function TabCadastrar({ onSaved }: Props) {
       <div className="section-card">
         <h2 className="section-title">⭐ Perfil e Status</h2>
         <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">Tipo <span className="text-primary">*</span></label>
-          <select value={form.tipo_lideranca} onChange={e => update('tipo_lideranca', e.target.value)} className={selectCls}>
-            <option value="">Selecione...</option>
-            {tiposLideranca.map(o => <option key={o} value={o}>{o}</option>)}
-          </select>
+          <label className="text-xs font-medium text-muted-foreground">Ligação política</label>
+          <input type="text" value={form.tipo_lideranca} onChange={e => update('tipo_lideranca', e.target.value)} placeholder="A quem é ligado politicamente" className={inputCls} />
         </div>
         <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">Nível</label>
-          <select value={form.nivel} onChange={e => update('nivel', e.target.value)} className={selectCls}>
-            <option value="">Selecione...</option>
-            {niveis.map(o => <option key={o} value={o}>{o}</option>)}
-          </select>
+          <label className="text-xs font-medium text-muted-foreground">Posição da ligação</label>
+          <input type="text" value={form.nivel} onChange={e => update('nivel', e.target.value)} placeholder="Cargo político ou função" className={inputCls} />
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">Região de atuação</label>
           <textarea value={form.regiao_atuacao} onChange={e => update('regiao_atuacao', e.target.value)} rows={2} placeholder="Bairro X, Comunidade Y..." className={textareaCls} />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">Zona de atuação</label>
-          <input type="text" value={form.zona_atuacao} onChange={e => update('zona_atuacao', e.target.value)} placeholder="Zona onde mais atua" className={inputCls} />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">Bairros de influência</label>
-          <textarea value={form.bairros_influencia} onChange={e => update('bairros_influencia', e.target.value)} rows={2} placeholder="Separados por vírgula" className={textareaCls} />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">Comunidades</label>
-          <textarea value={form.comunidades_influencia} onChange={e => update('comunidades_influencia', e.target.value)} rows={2} placeholder="Separados por vírgula" className={textareaCls} />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">Liderança principal</label>
-          <select value={form.lider_principal_id} onChange={e => update('lider_principal_id', e.target.value)} className={selectCls}>
-            <option value="">Nenhuma</option>
-            {liderancasExistentes.map(l => <option key={l.id} value={l.id}>{l.nome}</option>)}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">Origem</label>
-          <select value={form.origem_captacao} onChange={e => update('origem_captacao', e.target.value)} className={selectCls}>
-            <option value="">Selecione...</option>
-            {origens.map(o => <option key={o} value={o}>{o}</option>)}
-          </select>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1">
