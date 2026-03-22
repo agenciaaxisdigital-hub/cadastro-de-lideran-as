@@ -33,8 +33,8 @@ export default function TabCadastrar({ onSaved }: Props) {
   const { usuario } = useAuth();
   const [saving, setSaving] = useState(false);
   const [validandoCPF, setValidandoCPF] = useState(false);
-  const [cpfStatus, setCpfStatus] = useState<'idle' | 'validando' | 'confirmado' | 'divergente' | 'nao_encontrado'>('idle');
-  const [cpfNomeAPI, setCpfNomeAPI] = useState('');
+  const [cpfStatus, setCpfStatus] = useState<'idle' | 'validando' | 'confirmado'>('idle');
+  const [cpfNomePessoa, setCpfNomePessoa] = useState('');
   const [pessoaExistenteId, setPessoaExistenteId] = useState<string | null>(null);
   const [liderancasExistentes, setLiderancasExistentes] = useState<{ id: string; nome: string }[]>([]);
   const [form, setForm] = useState({ ...emptyForm });
