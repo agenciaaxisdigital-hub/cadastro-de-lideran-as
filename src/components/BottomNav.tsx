@@ -39,6 +39,15 @@ export default function BottomNav({ active, onChange }: Props) {
             </button>
           );
         })}
+        {isAdmin && (
+          <button
+            onClick={() => navigate('/admin')}
+            className="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all active:scale-90 text-muted-foreground"
+          >
+            <BarChart3 size={24} strokeWidth={1.5} />
+            <span className="text-[11px] font-medium">Dashboard</span>
+          </button>
+        )}
       </div>
     </nav>
   );
