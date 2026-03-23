@@ -1,187 +1,170 @@
-import { useState, lazy, Suspense, useMemo } from 'react';
+import { useState, useMemo, lazy, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { User, Lock, Loader2, LogIn, Eye, EyeOff } from 'lucide-react';
 import fernandaImg from '@/assets/fernanda-sarelli.jpg';
-import { hyperspeedPresets } from '@/components/HyperspeedPresets';
 
 const Hyperspeed = lazy(() => import('@/components/Hyperspeed'));
 
+const APP_TITLE = "Cadastro de Lideranças";
+
+const hyperspeedPreset = {
+  onSpeedUp: () => {}, onSlowDown: () => {},
+  distortion: "turbulentDistortion",
+  length: 800, roadWidth: 18, islandWidth: 4, lanesPerRoad: 3,
+  fov: 100, fovSpeedUp: 140, speedUp: 2, carLightsFade: 0.4,
+  totalSideLightSticks: 40, lightPairsPerRoadWay: 80,
+  shoulderLinesWidthPercentage: 0.05, brokenLinesWidthPercentage: 0.1, brokenLinesLengthPercentage: 0.5,
+  lightStickWidth: [0.12, 0.5], lightStickHeight: [1.3, 1.7],
+  movingAwaySpeed: [60, 100], movingCloserSpeed: [-120, -180],
+  carLightsLength: [800 * 0.04, 800 * 0.14], carLightsRadius: [0.05, 0.14],
+  carWidthPercentage: [0.3, 0.5], carShiftX: [-0.8, 0.8], carFloorSeparation: [0, 5],
+  colors: {
+    roadColor: 0x080510, islandColor: 0x0a0812, background: 0x070510,
+    shoulderLines: 0x1a0a1a, brokenLines: 0x1a0a1a,
+    leftCars: [0xec4899, 0xf9a8d4, 0xbe185d, 0xfda4af],
+    rightCars: [0xf43f5e, 0xff6b9d, 0xc026d3, 0xe879f9],
+    sticks: 0xf472b6,
+  },
+};
+
 export default function Login() {
   const { signIn } = useAuth();
-  const [nome, setNome] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [remember, setRemember] = useState(false);
+  const [username, setUsername] = useState(() => localStorage.getItem("saved_user") || "");
+  const [password, setPassword] = useState(() => localStorage.getItem("saved_pass") || "");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [remember, setRemember] = useState(() => !!localStorage.getItem("saved_user"));
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const preset = useMemo(() => hyperspeedPreset, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nome || !password) {
+    if (!username || !password) {
       toast({ title: 'Preencha nome e senha', variant: 'destructive' });
       return;
     }
     setLoading(true);
-    const { error } = await signIn(nome, password);
+    const { error } = await signIn(username, password);
     setLoading(false);
     if (error) {
       toast({ title: 'Erro ao entrar', description: 'Nome ou senha incorretos', variant: 'destructive' });
     }
+    if (remember) {
+      localStorage.setItem("saved_user", username);
+      localStorage.setItem("saved_pass", password);
+    } else {
+      localStorage.removeItem("saved_user");
+      localStorage.removeItem("saved_pass");
+    }
   };
 
   return (
-    <div
-      className="relative min-h-[100dvh] flex flex-col items-center justify-center px-6"
-      style={{ background: '#070510', touchAction: 'manipulation' }}
-    >
-      {/* 3D Highway Background */}
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center p-4 relative overflow-hidden" style={{ background: "#070510" }}>
       <Suspense fallback={null}>
-        <div className="fixed inset-0 z-0" style={{ background: '#070510' }}>
-          <Hyperspeed effectOptions={hyperspeedPresets.one} />
+        <div className="fixed inset-0 z-0">
+          <Hyperspeed effectOptions={preset} />
         </div>
       </Suspense>
+      <div className="absolute inset-0 z-[1] pointer-events-none" style={{ background: "radial-gradient(ellipse at center, transparent 40%, rgba(7,5,16,0.5) 100%)" }} />
 
-      {/* Content */}
-      <div className="relative z-10 flex flex-col items-center w-full max-w-sm space-y-5">
-        {/* Photo with online indicator */}
-        <div className="relative">
-          <div className="w-28 h-28 rounded-full p-[3px] bg-gradient-to-br from-pink-500 to-rose-400 shadow-lg shadow-pink-500/30">
-            <img
-              src={fernandaImg}
-              alt="Dra. Fernanda Sarelli"
-              className="w-full h-full rounded-full object-cover"
-            />
+      <div className="w-full max-w-sm space-y-6 relative z-10">
+        <div className="text-center space-y-3">
+          <div className="relative mx-auto w-28 h-28">
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-pink-500 to-rose-400 p-[3px]">
+              <div className="w-full h-full rounded-full overflow-hidden bg-black">
+                <img src={fernandaImg} alt="Dra. Fernanda Sarelli" className="w-full h-full object-cover" loading="eager" />
+              </div>
+            </div>
+            <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-black" />
           </div>
-          <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 border-[2.5px] border-[#070510] shadow-sm shadow-emerald-500/50" />
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight">Dra. Fernanda Sarelli</h1>
+            <p className="text-xs font-medium text-pink-400 uppercase tracking-widest mt-1">{APP_TITLE}</p>
+          </div>
+          <p className="text-[11px] text-white/40">Acesso exclusivo da equipe</p>
         </div>
 
-        {/* Title */}
-        <div className="text-center space-y-1">
-          <h1 className="text-2xl font-bold text-white tracking-tight">Dra. Fernanda Sarelli</h1>
-          <p className="text-sm font-semibold text-pink-400 uppercase tracking-wider">Cadastro de Lideranças</p>
-          <p className="text-xs text-white/40">Acesso exclusivo da equipe</p>
-        </div>
-
-        {/* Card */}
-        <form
-          onSubmit={handleSubmit}
-          className="w-full rounded-2xl p-6 space-y-4 border border-white/[0.08]"
-          style={{
-            background: 'rgba(0,0,0,0.60)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            boxShadow: '0 8px 32px hsl(340 82% 55% / 0.15)',
-          }}
-        >
-          {/* Username */}
-          <div className="space-y-2">
-            <label className="text-[11px] uppercase tracking-widest text-white/50 font-medium">
-              Usuário
-            </label>
+        <form onSubmit={handleLogin} className="space-y-4 bg-black/60 backdrop-blur-xl p-6 rounded-2xl border border-white/[0.08] shadow-[0_8px_32px_hsl(340_82%_55%/0.15)]">
+          <div className="space-y-1.5">
+            <label className="text-[11px] uppercase tracking-widest text-white/50 font-medium block">Usuário</label>
             <div className="relative">
-              <User size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
               <input
                 type="text"
-                value={nome}
-                onChange={e => setNome(e.target.value)}
                 placeholder="Seu nome de acesso"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
                 autoCapitalize="none"
                 autoCorrect="off"
                 autoComplete="username"
-                className="w-full h-13 pl-11 pr-4 rounded-xl text-white placeholder:text-white/25 outline-none transition-all focus:border-pink-500/50 focus:ring-1 focus:ring-pink-500/30"
-                style={{
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  fontSize: '16px',
-                  height: '52px',
-                }}
+                className="w-full bg-white/[0.06] border border-white/[0.1] text-white placeholder:text-white/25 focus:border-pink-500/50 h-11 pl-10 pr-4 rounded-lg text-sm outline-none focus:ring-1 focus:ring-pink-500/20"
+                style={{ fontSize: '16px' }}
               />
             </div>
           </div>
 
-          {/* Password */}
-          <div className="space-y-2">
-            <label className="text-[11px] uppercase tracking-widest text-white/50 font-medium">
-              Senha
-            </label>
+          <div className="space-y-1.5">
+            <label className="text-[11px] uppercase tracking-widest text-white/50 font-medium block">Senha</label>
             <div className="relative">
-              <Lock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
               <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
+                type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
                 autoComplete="current-password"
-                className="w-full pl-11 pr-12 rounded-xl text-white placeholder:text-white/25 outline-none transition-all focus:border-pink-500/50 focus:ring-1 focus:ring-pink-500/30"
-                style={{
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  fontSize: '16px',
-                  height: '52px',
-                }}
+                className="w-full bg-white/[0.06] border border-white/[0.1] text-white placeholder:text-white/25 focus:border-pink-500/50 h-11 pl-10 pr-10 rounded-lg text-sm outline-none focus:ring-1 focus:ring-pink-500/20"
+                style={{ fontSize: '16px' }}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors" tabIndex={-1}>
+                {showPassword
+                  ? <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 4.411m0 0L21 21" /></svg>
+                  : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                }
               </button>
             </div>
           </div>
 
-          {/* Remember checkbox */}
-          <label className="flex items-center gap-2.5 cursor-pointer select-none group">
-            <button
-              type="button"
-              onClick={() => setRemember(!remember)}
-              className={`w-[18px] h-[18px] rounded-[5px] border flex items-center justify-center transition-all shrink-0 ${
-                remember
-                  ? 'bg-pink-500 border-pink-500 shadow-sm shadow-pink-500/30'
-                  : 'border-white/20 bg-white/5 group-hover:border-white/30'
-              }`}
-            >
-              {remember && (
-                <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                  <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
-            </button>
-            <span className="text-xs text-white/50 group-hover:text-white/70 transition-colors">
-              Lembrar meus dados
-            </span>
-          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="remember"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+              className="w-4 h-4 rounded border-white/20 bg-white/10 accent-pink-500 cursor-pointer"
+            />
+            <label htmlFor="remember" className="text-xs text-white/50 cursor-pointer select-none">Lembrar meus dados</label>
+          </div>
 
-          {/* Submit button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-13 gradient-primary text-white font-semibold rounded-xl shadow-lg shadow-pink-500/25 hover:shadow-pink-500/40 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
-            style={{ touchAction: 'manipulation', height: '50px' }}
+            className="w-full h-11 rounded-lg font-semibold text-sm text-white transition-all active:scale-[0.98] disabled:opacity-60"
+            style={{ background: 'linear-gradient(to right, #ec4899, #fb7185)', boxShadow: '0 4px 16px hsl(340 82% 55% / 0.3)' }}
           >
-            {loading ? (
-              <>
-                <Loader2 size={18} className="animate-spin" />
-                Entrando...
-              </>
-            ) : (
-              <>
-                <LogIn size={18} />
-                Entrar
-              </>
-            )}
+            {loading
+              ? <span className="flex items-center justify-center gap-2"><span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />Entrando...</span>
+              : <span className="flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>
+                  Entrar
+                </span>
+            }
           </button>
         </form>
 
-        {/* Footer */}
-        <div className="text-center space-y-0.5">
-          <p className="text-[11px] text-white/25">Pré-candidata a Deputada Estadual — GO 2026</p>
-          <p className="text-[11px] text-pink-400/40">drafernandasarelli.com.br</p>
+        <div className="text-center space-y-1">
+          <p className="text-[10px] text-white/25">Pré-candidata a Deputada Estadual — GO 2026</p>
+          <a href="https://drafernandasarelli.com.br" target="_blank" rel="noopener noreferrer" className="text-[10px] text-pink-500/50 hover:text-pink-400 transition-colors">
+            drafernandasarelli.com.br
+          </a>
         </div>
       </div>
-
-      {/* Safe area bottom */}
-      <div style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }} />
     </div>
   );
 }
